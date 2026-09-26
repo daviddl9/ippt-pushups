@@ -19,7 +19,7 @@ const NO_CLEANUP = () => {};
 export function showScreen(route: Route, root: HTMLElement, deps: AppDeps): () => void {
   switch (route.name) {
     case 'live':
-      return startLiveScreen(route.mode, renderLive(root, route.mode), deps);
+      return startLiveScreen(route.mode, renderLive(root, route.mode, deps.settings.camera), deps);
     case 'summary':
       renderSummary(root, loadSessions(deps.storage).find((s) => s.id === route.id), framesFor(route.id));
       return NO_CLEANUP;

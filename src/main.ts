@@ -7,12 +7,15 @@ import './ui/styles.css';
 
 const root = document.getElementById('app')!;
 const deps: AppDeps = {
-  settings: readSettings(location.search, localStorage),
+  get settings() {
+    return readSettings(location.search, localStorage);
+  },
   voice: createVoice(),
   storage: localStorage,
   navigate: (hash) => {
     location.hash = hash;
   },
+  refresh: () => render(),
 };
 
 let cleanup = () => {};

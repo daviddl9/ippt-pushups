@@ -6,4 +6,6 @@ export interface AppDeps {
   readonly voice: Voice;
   readonly storage: Storage;
   navigate(hash: string): void;
+  /** Re-renders the current screen without a page reload, so iOS keeps speech unlocked. */
+  refresh(): void;
 }

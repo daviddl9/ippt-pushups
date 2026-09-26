@@ -10,8 +10,9 @@ export function renderDebug(root: HTMLElement): DebugView {
   const canvas = el('canvas');
   const fps = el('dd', { testId: 'fps', text: '–' });
   const loadMs = el('span', { testId: 'load-ms', text: '–' });
-  const model = el('select', { testId: 'model-select' }, option('lite', 'Lite (fast)'), option('full', 'Full (accurate)'));
+  const model = el('select', { testId: 'model-select' }, option('lite', 'Lite'), option('full', 'Full'));
   const delegate = el('select', { testId: 'delegate-select' }, option('GPU', 'GPU'), option('CPU', 'CPU'));
+  const camera = el('select', { testId: 'camera-select' }, option('user', 'Front'), option('environment', 'Back'));
   const voice = el('button', { className: 'button', testId: 'voice-test', text: 'Test voice', attrs: { type: 'button' } });
   const error = el('p', { className: 'error', attrs: { role: 'alert' } });
   root.append(
@@ -24,14 +25,18 @@ export function renderDebug(root: HTMLElement): DebugView {
         { className: 'panel' },
         el('header', { className: 'panel-header' }, el('a', { className: 'back', text: '‹ Home', attrs: { href: '#/' } }), el('h1', { text: 'Camera check' })),
         el('dl', { className: 'stats' }, stat('Frames / s', fps), stat('Model load', el('dd', {}, loadMs, ' ms'))),
-        el('div', { className: 'fields' }, field('Model', model), field('Delegate', delegate)),
+        el('div', { className: 'fields' }, field('Model', model), field('Delegate', delegate), field('Camera', camera)),
         voice,
         error,
         el('p', { className: 'hint', text: 'Phone landscape on the floor, side-on, whole body in frame.' }),
       ),
     ),
   );
-  const settings = (): Settings => ({ model: model.value as Settings['model'], delegate: delegate.value as Settings['delegate'] });
+  const settings = (): Settings => ({
+    model: model.value as Settings['model'],
+    delegate: delegate.value as Settings['delegate'],
+    camera: camera.value as Settings['camera'],
+  });
   return {
     video,
     drawPose: (pose) => drawSkeleton(canvas, pose, video),
@@ -40,11 +45,11 @@ export function renderDebug(root: HTMLElement): DebugView {
     showSettings: (current) => {
       model.value = current.model;
       delegate.value = current.delegate;
+      camera.value = current.camera;
     },
     showError: (message) => void (error.textContent = message),
     onSettingsChange: (handler) => {
-      model.onchange = () => handler(settings());
-      delegate.onchange = () => handler(settings());
+      for (const select of [model, delegate, camera]) select.onchange = () => handler(settings());
     },
     onVoiceTest: (handler) => void (voice.onclick = handler),
   };

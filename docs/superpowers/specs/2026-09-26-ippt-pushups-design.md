@@ -90,12 +90,12 @@ All constants live in `src/core/rules.config.ts` and are tuned in M5.
        (unlocks voice)                                                  (60 s, or untimed)            (auto-saved)
 ```
 
-- **Live:** big count, timer, status, last verdict, and a skeleton overlay. Good reps are silent. The voice speaks only no-counts, each with a correction cue ("No count, go lower"), plus "Ready", "Calibrated", 30 s, 10 s and the final tally. Lines from the same frame are joined.
+- **Live:** big count, timer, status, last verdict, and a skeleton overlay. Good reps are silent. The voice speaks only no-counts, each with a correction cue ("No count, go lower"), plus "Ready", "Calibrated", 30 s, 10 s and the final tally. Lines from the same frame are joined. A **Flip camera** button switches between front and back cameras; the choice is remembered, and flipping restarts the screen in place (no page reload, so iOS speech stays unlocked).
 - **Summary:** valid / no-count totals by reason. Each rep is a chip; tapping a no-count shows its lowest frame (kept in memory only) and the reason.
 - **History:** a list of sessions plus a valid-reps trend.
 - **Untimed mode** ends with a Stop tap, or after 5 s without a plank (standing, kneeling or out of view).
 - **Upload:** pick a video; it runs through the same pipeline at 15 fps with voice off and analyses the first set.
-- **Debug** (`#/debug`): camera, skeleton, fps, model load time, model/delegate choice, and a voice test.
+- **Debug** (`#/debug`): camera, skeleton, fps, model load time, model/delegate/camera choice, and a voice test.
 
 **Data**
 
