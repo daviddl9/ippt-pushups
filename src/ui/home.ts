@@ -29,6 +29,7 @@ export function renderHome(root: HTMLElement, actions: HomeActions): void {
       el(
         'nav',
         { className: 'links' },
+        el('a', { className: 'button secondary', testId: 'history-link', text: 'History', attrs: { href: '#/history' } }),
         el('a', { className: 'button secondary', testId: 'debug-link', text: 'Camera check', attrs: { href: '#/debug' } }),
       ),
     ),
