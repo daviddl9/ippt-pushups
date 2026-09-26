@@ -1,15 +1,17 @@
 import type { Mode } from '../core/mode';
-import { startCamera } from '../io/camera';
+import { otherCamera, startCamera } from '../io/camera';
 import { keepScreenOn } from '../io/wakeLock';
 import type { AppDeps } from './deps';
 import { getEstimator } from './estimator';
 import { finishSession } from './finishSession';
 import { runLiveSession, type LiveSession, type SessionView } from './liveSession';
+import { saveSettings } from './settings';
 
 export interface LiveScreenView extends SessionView {
   readonly video: HTMLVideoElement;
   showError(message: string): void;
   onStop(handler: () => void): void;
+  onFlipCamera(handler: () => void): void;
 }
 
 /** Runs one live set on the view; returns a cleanup that stops it (the set is still saved). */
@@ -22,6 +24,7 @@ export function startLiveScreen(mode: Mode, view: LiveScreenView, deps: AppDeps)
   });
   const stop = () => void started.then((live) => live?.stop());
   view.onStop(stop);
+  view.onFlipCamera(() => flipCamera(deps));
   return () => {
     left = true;
     stop();
@@ -31,7 +34,7 @@ export function startLiveScreen(mode: Mode, view: LiveScreenView, deps: AppDeps)
 async function begin(mode: Mode, view: LiveScreenView, deps: AppDeps): Promise<LiveSession> {
   const startedAt = new Date();
   const estimator = await getEstimator(deps.settings);
-  const stopCamera = await startCamera(view.video);
+  const stopCamera = await startCamera(view.video, deps.settings.camera);
   const releaseScreen = await keepScreenOn();
   const live = runLiveSession(mode, view.video, estimator, deps.voice, view);
   const stopWhenHidden = () => document.hidden && live.stop();
@@ -43,4 +46,11 @@ async function begin(mode: Mode, view: LiveScreenView, deps: AppDeps): Promise<L
     finishSession(finished, { startedAt, source: 'camera', model: deps.settings.model }, deps);
   });
   return live;
+}
+
+/** Remembers the other camera and restarts this screen with it; a set in progress is saved but not shown. */
+function flipCamera(deps: AppDeps): void {
+  const { settings } = deps;
+  saveSettings({ ...settings, camera: otherCamera(settings.camera) }, deps.storage);
+  deps.refresh();
 }

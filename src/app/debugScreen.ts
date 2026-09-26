@@ -40,7 +40,7 @@ async function run(view: DebugView, deps: AppDeps): Promise<() => void> {
   const loadStart = performance.now();
   const estimator = await getEstimator(deps.settings);
   view.showLoadMs(performance.now() - loadStart);
-  const stopCamera = await startCamera(view.video);
+  const stopCamera = await startCamera(view.video, deps.settings.camera);
   const fps = createFpsMeter();
   const stopFrames = eachVideoFrame(view.video, (tMs) => {
     view.drawPose(estimator.detect(view.video, tMs));

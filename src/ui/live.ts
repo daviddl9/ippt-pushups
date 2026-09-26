@@ -1,5 +1,6 @@
 import { createFpsMeter } from '../app/fpsMeter';
 import type { LiveScreenView } from '../app/liveScreen';
+import type { CameraFacing } from '../io/camera';
 import { formatClock, statusText, timerText } from '../app/liveText';
 import { isValid } from '../core/judge';
 import type { Mode } from '../core/mode';
@@ -15,12 +16,13 @@ const LOW_FPS = 12;
 const FPS_GRACE_MS = 3000;
 const LOW_FPS_MESSAGE = 'Low frame rate. Switch to the lite model in Camera check';
 const IPPT_START_MS = 60_000;
+const FLIP_LABELS: Record<CameraFacing, string> = { user: '⟲ Use back camera', environment: '⟲ Use front camera' };
 
 const setText = (node: Node, text: string) => {
   if (node.textContent !== text) node.textContent = text;
 };
 
-export function renderLive(root: HTMLElement, mode: Mode): LiveScreenView {
+export function renderLive(root: HTMLElement, mode: Mode, camera: CameraFacing): LiveScreenView {
   const video = el('video', { attrs: { muted: '', playsinline: '' } });
   const canvas = el('canvas');
   const count = el('output', { className: 'count', testId: 'count', text: '0' });
@@ -29,11 +31,12 @@ export function renderLive(root: HTMLElement, mode: Mode): LiveScreenView {
   const verdict = el('p', { className: 'verdict', testId: 'verdict', attrs: { 'aria-live': 'polite' } });
   const status = el('p', { className: 'status', testId: 'status', text: 'Loading the pose model…' });
   const stop = el('button', { className: 'button secondary stop', testId: 'stop', text: 'Stop', attrs: { type: 'button' } });
+  const flip = el('button', { className: 'flip-camera', testId: 'flip-camera', text: FLIP_LABELS[camera], attrs: { type: 'button' } });
   root.append(
     el(
       'section',
       { className: 'screen live' },
-      el('div', { className: 'stage' }, video, canvas),
+      el('div', { className: 'stage' }, video, canvas, flip),
       el(
         'div',
         { className: 'scoreboard' },
@@ -74,6 +77,9 @@ export function renderLive(root: HTMLElement, mode: Mode): LiveScreenView {
     },
     onStop(handler) {
       stop.onclick = handler;
+    },
+    onFlipCamera(handler) {
+      flip.onclick = handler;
     },
   };
 }
