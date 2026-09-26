@@ -604,3 +604,37 @@ select {
   justify-items: start;
   color: var(--muted);
 }
+
+/* Upload */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.button.upload {
+  position: relative;
+}
+
+.button.upload:has(input:disabled),
+.button:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.button.upload:focus-within {
+  outline: 3px solid var(--valid);
+  outline-offset: 2px;
+}
+
+.upload-progress:empty {
+  display: none;
+}
+
+.upload-progress.error {
+  color: var(--no-count);
+  font-weight: 600;
+}
