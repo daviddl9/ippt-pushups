@@ -7,11 +7,14 @@ const rep = (reasons: RepResult['reasons']): RepResult => ({
 });
 
 describe('speechFor', () => {
-  it.each<[SessionEvent, string]>([
+  it.each<[SessionEvent, string | null]>([
     [{ type: 'ready' }, 'Ready'],
-    [{ type: 'rep', rep: rep([]), validCount: 12 }, '12'],
-    [{ type: 'rep', rep: rep(['not_low_enough']), validCount: 12 }, 'No count, lower'],
-    [{ type: 'rep', rep: rep(['knees_down', 'butt_high']), validCount: 3 }, 'No count, knees'],
+    [{ type: 'rep', rep: rep([]), validCount: 12 }, null],
+    [{ type: 'rep', rep: rep(['not_low_enough']), validCount: 12 }, 'No count, go lower'],
+    [{ type: 'rep', rep: rep(['no_lockout']), validCount: 3 }, 'No count, straighten arms'],
+    [{ type: 'rep', rep: rep(['butt_high']), validCount: 3 }, 'No count, straighten back'],
+    [{ type: 'rep', rep: rep(['hips_sagging']), validCount: 3 }, 'No count, straighten back'],
+    [{ type: 'rep', rep: rep(['knees_down', 'butt_high']), validCount: 3 }, 'No count, knees up'],
     [{ type: 'calibrated', shallow: false }, 'Calibrated'],
     [{ type: 'calibrated', shallow: true }, 'Calibration too shallow. Restart and go lower'],
     [{ type: 'lost' }, "Can't see you"],

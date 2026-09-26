@@ -17,7 +17,7 @@ export function renderHome(root: HTMLElement, actions: HomeActions): void {
         { className: 'hero' },
         el('p', { className: 'eyebrow', text: 'IPPT trainer' }),
         el('h1', { text: 'Push-ups' }),
-        el('p', { className: 'lede', text: 'Counts your reps out loud and calls no‑counts like an IPPT tester.' }),
+        el('p', { className: 'lede', text: 'Counts your reps and calls out no‑counts like an IPPT tester.' }),
       ),
       el(
         'div',

@@ -1,20 +1,21 @@
 import { isValid, type Reason } from './judge';
 import type { SessionEvent } from './session';
 
-const REASON_WORDS: Record<Reason, string> = {
-  not_low_enough: 'lower',
-  no_lockout: 'lock arms',
-  butt_high: 'butt high',
-  hips_sagging: 'hips sagging',
-  knees_down: 'knees',
+const CUES: Record<Reason, string> = {
+  knees_down: 'knees up',
+  not_low_enough: 'go lower',
+  no_lockout: 'straighten arms',
+  butt_high: 'straighten back',
+  hips_sagging: 'straighten back',
 };
 
-export function speechFor(event: SessionEvent): string {
+/** What the voice says for an event, or null to stay quiet: good reps are silent. */
+export function speechFor(event: SessionEvent): string | null {
   switch (event.type) {
     case 'ready':
       return 'Ready';
     case 'rep':
-      return isValid(event.rep) ? String(event.validCount) : `No count, ${REASON_WORDS[event.rep.reasons[0]]}`;
+      return isValid(event.rep) ? null : `No count, ${CUES[event.rep.reasons[0]]}`;
     case 'calibrated':
       return event.shallow ? 'Calibration too shallow. Restart and go lower' : 'Calibrated';
     case 'lost':

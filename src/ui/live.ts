@@ -63,7 +63,7 @@ export function renderLive(root: HTMLElement, mode: Mode): LiveScreenView {
       const rep = events.findLast((event): event is RepEvent => event.type === 'rep');
       if (!rep) return;
       const valid = isValid(rep.rep);
-      verdict.textContent = valid ? 'Good rep' : speechFor(rep);
+      verdict.textContent = valid ? 'Good rep' : (speechFor(rep) ?? '');
       verdict.className = `verdict ${valid ? 'valid' : 'invalid'}`;
     },
     showError(message) {

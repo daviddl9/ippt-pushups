@@ -26,7 +26,8 @@ export function runLiveSession(mode: Mode, video: HTMLVideoElement, estimator: P
   const apply = (step: SessionStep, pose: Pose | null, tMs: number) => {
     snapshots.observe(state, step);
     state = step.state;
-    if (step.events.length > 0) voice.say(step.events.map(speechFor).join('. '));
+    const lines = step.events.map(speechFor).filter((line): line is string => line !== null);
+    if (lines.length > 0) voice.say(lines.join('. '));
     view.announce(step.events);
     view.render(state, pose, tMs);
     if (state.phase !== 'done') return;
