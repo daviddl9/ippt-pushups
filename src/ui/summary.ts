@@ -27,7 +27,12 @@ function summaryScreen(session: SavedSession, frames: ReadonlyMap<number, string
     reasonList(summary.byReason),
     el('div', { className: 'chips' }, ...chips),
     detail,
-    el('nav', { className: 'links' }, el('a', { className: 'button', text: 'Home', attrs: { href: '#/' } })),
+    el(
+      'nav',
+      { className: 'links' },
+      el('a', { className: 'button', text: 'Home', attrs: { href: '#/' } }),
+      el('a', { className: 'button secondary', text: 'History', attrs: { href: '#/history' } }),
+    ),
   );
 }
 

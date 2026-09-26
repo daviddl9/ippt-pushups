@@ -1,6 +1,7 @@
 import type { Mode } from '../core/mode';
 import { loadSessions } from '../store/history';
 import { renderDebug } from '../ui/debug';
+import { renderHistory } from '../ui/history';
 import { renderHome } from '../ui/home';
 import { renderLive } from '../ui/live';
 import { renderSummary } from '../ui/summary';
@@ -24,6 +25,8 @@ export function showScreen(route: Route, root: HTMLElement, deps: AppDeps): () =
     case 'debug':
       return startDebugScreen(renderDebug(root), deps);
     case 'history':
+      renderHistory(root, loadSessions(deps.storage));
+      return NO_CLEANUP;
     case 'home':
       return showHome(root, deps);
   }
