@@ -10,6 +10,7 @@ import type { AppDeps } from './deps';
 import { startLiveScreen } from './liveScreen';
 import { routeHash, type Route } from './routes';
 import { framesFor } from './sessionFrames';
+import { analyzeUpload } from './uploadFlow';
 
 const START_LINE = 'Get into position, side-on to the camera';
 const NO_CLEANUP = () => {};
@@ -37,6 +38,13 @@ function showHome(root: HTMLElement, deps: AppDeps): () => void {
     deps.voice.say(START_LINE);
     deps.navigate(routeHash({ name: 'live', mode }));
   };
-  renderHome(root, { startIppt: () => start('ippt60'), startUntimed: () => start('untimed') });
+  const view = renderHome(root, {
+    startIppt: () => start('ippt60'),
+    startUntimed: () => start('untimed'),
+    upload: (file) =>
+      void analyzeUpload(file, deps, view.showProgress).catch((error: unknown) =>
+        view.showError(error instanceof Error ? error.message : String(error)),
+      ),
+  });
   return NO_CLEANUP;
 }
