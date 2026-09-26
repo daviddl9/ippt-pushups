@@ -76,17 +76,18 @@ Height is smoothed with a time-based EMA (τ = 50 ms) so results don't depend on
 
 **Calibration**
 
-1. **Setup:** hold the top position for 1 s. This picks the camera-facing side (higher visibility), sets "up" as the mean wrist→shoulder direction, and records the setup height. Then the countdown runs, and counting and the timer start at "go".
-2. **Reps 1–3:** the depth line is set to their median bottom + 0.08, the lockout line to their median top − 0.05, and the hip baseline to their median hip offset. The voice then says "Calibrated". Reps 1–3 count. They're judged on body line, knees and a lenient provisional lockout of 0.85, but not on depth. On the clip, the tops of reps sat 5–8% below the static setup hold.
-3. **Sanity check:** if the calibration bottom is above 0.60, show "calibration reps look shallow — redo".
+1. **Setup:** get into the top position. After 1 s steady, the voice says "Ready". This picks the camera-facing side (higher visibility), sets "up" as the mean wrist→shoulder direction, and records the setup height.
+2. **Auto-start, no countdown:** the set starts when the first rep is done. That rep is counted as "one", and the 60 s timer is backdated to when it began (its first descent), to match a real test's "go".
+3. **Reps 1–3:** the depth line is set to their median bottom + 0.08, the lockout line to their median top − 0.05, and the hip baseline to their median hip offset. The voice then says "Calibrated". Reps 1–3 count. They're judged on body line, knees and a lenient provisional lockout of 0.85, but not on depth. On the clip, the tops of reps sat 5–8% below the static setup hold.
+4. **Sanity check:** if the calibration bottom is above 0.60, show "calibration reps look shallow — redo".
 
 Starting thresholds (all constants in one file; tuned in M5): prominence 0.12, depth +0.08, lockout −0.05, hip ±5%, knee 150°, tilt 40°, visibility 0.5.
 
 ## Session flow and UI
 
 ```
- Home ─tap Start─► Framing check ─► Hold top ─► "3-2-1 go" ─► Live ─► Summary ─► History
-       (unlocks voice)  (body in frame)          60 s or untimed   (auto-saved)
+ Home ─tap Start─► Framing check ─► Hold top: "Ready" ─► Rep 1 done: "one", timer runs ─► Summary ─► History
+       (unlocks voice)  (body in frame)                       (60 s or untimed)            (auto-saved)
 ```
 
 - **Live:** big count, timer, last verdict, and a skeleton overlay. The voice speaks the count number, or "No count, <reason>". It announces 30 s, 10 s and "Time".
@@ -99,7 +100,7 @@ Starting thresholds (all constants in one file; tuned in M5): prominence 0.12, d
 
 ```ts
 type Reason = 'not_low_enough' | 'no_lockout' | 'butt_high' | 'hips_sagging' | 'knees_down';
-interface RepResult { index: number; tMs: number; valid: boolean; reasons: Reason[];
+interface RepResult { index: number; startMs: number; endMs: number; valid: boolean; reasons: Reason[];
   bottom: number; top: number; hipMax: number; hipMin: number; kneeMin: number }
 interface Thresholds { side: 'left' | 'right'; up: [number, number]; setupHeightPx: number;
   depthLine: number; lockoutLine: number; hipBaseline: number }
@@ -113,6 +114,8 @@ interface Session { id: string; startedAt: string; mode: 'ippt60' | 'untimed'; s
 |---|---|
 | Tracking lost for > 1 s | Pause detection and say "Can't see you" once |
 | Resting at the top | Allowed; the timer keeps running |
+| Reps before "Ready" | Ignored; the set starts with the first rep after "Ready" |
+| Rep finishing after "Time" | Not counted (same as IPPT) |
 | Standing up at the end | Discard the last attempt if the user leaves position within 2 s |
 | fps < 12 over 3 s | Show a warning and suggest the lite model |
 | Speech falls behind | Cancel the queued line and speak the latest |
