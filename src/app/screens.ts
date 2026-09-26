@@ -1,14 +1,39 @@
+import type { Mode } from '../core/mode';
+import { loadSessions } from '../store/history';
 import { renderDebug } from '../ui/debug';
 import { renderHome } from '../ui/home';
+import { renderLive } from '../ui/live';
+import { renderSummary } from '../ui/summary';
 import { startDebugScreen } from './debugScreen';
 import type { AppDeps } from './deps';
-import type { Route } from './routes';
+import { startLiveScreen } from './liveScreen';
+import { routeHash, type Route } from './routes';
+import { framesFor } from './sessionFrames';
 
+const START_LINE = 'Get into position, side-on to the camera';
 const NO_CLEANUP = () => {};
 
 /** Renders the screen for a route into root; returns its cleanup. */
 export function showScreen(route: Route, root: HTMLElement, deps: AppDeps): () => void {
-  if (route.name === 'debug') return startDebugScreen(renderDebug(root), deps);
-  renderHome(root);
+  switch (route.name) {
+    case 'live':
+      return startLiveScreen(route.mode, renderLive(root, route.mode), deps);
+    case 'summary':
+      renderSummary(root, loadSessions(deps.storage).find((s) => s.id === route.id), framesFor(route.id));
+      return NO_CLEANUP;
+    case 'debug':
+      return startDebugScreen(renderDebug(root), deps);
+    case 'history':
+    case 'home':
+      return showHome(root, deps);
+  }
+}
+
+function showHome(root: HTMLElement, deps: AppDeps): () => void {
+  const start = (mode: Mode) => {
+    deps.voice.say(START_LINE);
+    deps.navigate(routeHash({ name: 'live', mode }));
+  };
+  renderHome(root, { startIppt: () => start('ippt60'), startUntimed: () => start('untimed') });
   return NO_CLEANUP;
 }

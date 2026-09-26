@@ -4,18 +4,18 @@
 
 ## Goal
 
-A phone web app that watches a push-up set through the camera, counts valid reps out loud, and calls out no-counts with a reason, like an IPPT tester. It also analyses uploaded videos and keeps a history of sessions.
+A phone web app that watches a push-up set through the camera, counts valid reps on screen, and calls out no-counts with a correction cue, like an IPPT tester. It also analyses uploaded videos and keeps a history of sessions.
 
-**Done when:** on an iPhone 13 Pro (iOS 26 Safari) it runs at ≥15 fps, counts a full 60 s set correctly by voice, and flags the deliberate faults in a labelled test clip.
+**Done when:** on an iPhone 13 Pro (iOS 26 Safari) it runs at ≥15 fps, counts a full 60 s set correctly, and flags the deliberate faults in a labelled test clip.
 
 ## IPPT rules → checks
 
 | IPPT rule ([MINDEF](https://www.mindef.gov.sg/news-and-events/latest-releases/2015feb27-news-releases-00009/)) | Check | Voice |
 |---|---|---|
-| Chest down to a fist's distance from the ground | bottom height ≤ depth line | "No count, lower" |
-| Arms straight at top (ELISS is strict) | elbow angle at top ≥ setup-hold angle − 12° | "No count, lock arms" |
-| Body straight | hip offset within ±5% of baseline | "No count, butt high" / "No count, hips sagging" |
-| No resting on knees | knee angle ≥ 150° | "No count, knees" |
+| Chest down to a fist's distance from the ground | bottom height ≤ depth line | "No count, go lower" |
+| Arms straight at top (ELISS is strict) | elbow angle at top ≥ setup-hold angle − 12° | "No count, straighten arms" |
+| Body straight | hip offset within ±5% of baseline | "No count, straighten back" |
+| No resting on knees | knee angle ≥ 150° | "No count, knees up" |
 
 A phone camera can't measure "a fist" in absolute terms, so depth is judged against your own calibration reps. Lockout uses the elbow angle rather than height, because height can't tell a bent top from a straight one. With the upper arm and forearm the same length, a 150° elbow still gives 97% of full height.
 
@@ -78,7 +78,7 @@ All four signals are smoothed with a time-based EMA (τ = 50 ms), so results don
 
 1. **Setup:** hold a plank with straight arms (elbow ≥ 150°) and legs for 1 s. The voice then says "Ready". This picks the camera-facing side, sets "up" as the mean wrist→shoulder direction, records the setup height, and sets the lockout angle to the mean elbow angle − 12°.
 2. **Auto-start, no countdown:** the set starts when the first rep is done. That rep counts as "one", and the 60 s timer is backdated to when it began.
-3. **Reps 1–3:** the depth line is set to their median bottom + 0.12, and the hip baseline to their median hip offset. The voice says "3. Calibrated". Reps 1–3 count and are judged on every rule except depth.
+3. **Reps 1–3:** the depth line is set to their median bottom + 0.12, and the hip baseline to their median hip offset. The voice says "Calibrated". Reps 1–3 count and are judged on every rule except depth.
 4. **Sanity check:** if the calibration bottom is above 0.60, the voice says "Calibration too shallow. Restart and go lower".
 
 All constants live in `src/core/rules.config.ts` and are tuned in M5.
@@ -86,11 +86,11 @@ All constants live in `src/core/rules.config.ts` and are tuned in M5.
 ## Session flow and UI
 
 ```
- Home ─tap Start─► Live: "Get into position" ─► plank 1 s: "Ready" ─► rep 1 done: "1", timer runs ─► Summary ─► History
+ Home ─tap Start─► Live: "Get into position" ─► plank 1 s: "Ready" ─► rep 1 done: timer runs ─► Summary ─► History
        (unlocks voice)                                                  (60 s, or untimed)            (auto-saved)
 ```
 
-- **Live:** big count, timer, status, last verdict, and a skeleton overlay. The voice speaks the count, or "No count, <reason>". Events from the same frame are joined ("3. Calibrated"). It announces 30 s, 10 s and "Time".
+- **Live:** big count, timer, status, last verdict, and a skeleton overlay. Good reps are silent. The voice speaks only no-counts, each with a correction cue ("No count, go lower"), plus "Ready", "Calibrated", 30 s, 10 s and the final tally. Lines from the same frame are joined.
 - **Summary:** valid / no-count totals by reason. Each rep is a chip; tapping a no-count shows its lowest frame (kept in memory only) and the reason.
 - **History:** a list of sessions plus a valid-reps trend.
 - **Untimed mode** ends with a Stop tap, or after 5 s without a plank (standing, kneeling or out of view).
@@ -115,7 +115,7 @@ interface SavedSession { id: string; startedAt: string; mode: 'ippt60' | 'untime
 |---|---|
 | Tracking lost for > 1 s | Say "Can't see you" once |
 | Resting at the top | Allowed; the timer keeps running |
-| Kneeling or getting up | Still fed to the counter, so a knee touch gets "No count, knees". A final knees-down no-count is dropped when the set ends, because it's you getting up |
+| Kneeling or getting up | Still fed to the counter, so a knee touch gets "No count, knees up". A final knees-down no-count is dropped when the set ends, because it's you getting up |
 | Reps before "Ready" | Ignored |
 | Rep finishing after "Time" | Not counted (same as IPPT) |
 | fps < 12 | Live screen shows a warning suggesting the lite model |
@@ -129,7 +129,7 @@ interface SavedSession { id: string; startedAt: string; mode: 'ippt60' | 'untime
 - **Golden fixtures:** landmarks from `IMG_8568.MOV` (Python MediaPipe 0.10.21, lite and full), run at 30 and 15 fps. Expect "Ready" at 8–10 s, 25 reps, no faults except possibly rep 10 `not_low_enough`, and the IPPT clock starting at 12–13.3 s. The video itself is never committed.
 - **E2E (Playwright, CPU delegate):**
   - **Upload:** the clip as VP9 WebM, because Playwright's Chromium lacks H.264/HEVC. Expect 25 rep chips.
-  - **Live:** the clip as a fake MJPEG camera. Expect "Ready", "3. Calibrated", an auto-end, and 25 chips.
+  - **Live:** the clip as a fake MJPEG camera. Expect "Ready", "Calibrated", no per-rep counts, an auto-end, and 25 chips.
   - **Debug:** expect fps above 10.
 - **Labelled clip** (recorded by you, side-on): 3 good reps, then 2 each of half rep, butt high, hips sagging, no lockout and knees, then 2 more good reps. It becomes golden fixture #2 and is used to tune the thresholds.
 - **On device:** fps ≥ 15, voice audible with the camera on, screen stays awake, full 60 s set.
