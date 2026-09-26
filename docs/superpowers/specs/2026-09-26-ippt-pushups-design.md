@@ -1,6 +1,6 @@
 # IPPT Push-up Coach — Design
 
-**Status:** approved design, 2026-09-26 · **Owner:** daviddl9
+**Status:** approved design, 2026-09-26, revised after prototyping · **Owner:** daviddl9
 
 ## Goal
 
@@ -13,11 +13,11 @@ A phone web app that watches a push-up set through the camera, counts valid reps
 | IPPT rule ([MINDEF](https://www.mindef.gov.sg/news-and-events/latest-releases/2015feb27-news-releases-00009/)) | Check | Voice |
 |---|---|---|
 | Chest down to a fist's distance from the ground | bottom height ≤ depth line | "No count, lower" |
-| Arms straight at top (ELISS is strict) | top height ≥ lockout line | "No count, lock arms" |
+| Arms straight at top (ELISS is strict) | elbow angle at top ≥ setup-hold angle − 12° | "No count, lock arms" |
 | Body straight | hip offset within ±5% of baseline | "No count, butt high" / "No count, hips sagging" |
 | No resting on knees | knee angle ≥ 150° | "No count, knees" |
 
-A phone camera can't measure "a fist" in absolute terms. Depth is judged relative to the user's own calibration reps.
+A phone camera can't measure "a fist" in absolute terms, so depth is judged against your own calibration reps. Lockout uses the elbow angle rather than height, because height can't tell a bent top from a straight one. With the upper arm and forearm the same length, a 150° elbow still gives 97% of full height.
 
 ## Approach
 
@@ -27,126 +27,130 @@ Rejected options:
 - **Server-side pose:** adds network lag and a server to run, with no accuracy gain.
 - **Vision-LLM API:** it samples about 1 frame per second, which misses reps at a 0.8 s cadence. It also costs money and can't give live feedback.
 
-**Evidence** from `IMG_8568.MOV` (45 s, iPhone, floor level, ~45° front-oblique angle):
+**Evidence** from prototyping on `IMG_8568.MOV` (45 s, iPhone, floor level, ~45° front-oblique angle):
 
 | Finding | Value |
 |---|---|
 | Pose found | lite 88%, full 91%, heavy 95% of frames |
 | Camera-side limb visibility | 0.98 (far side 0.56, unusable) |
-| Reps counted by the proposed logic | 25/25 on all 3 models (lite adds 1 false attempt while standing up; the stand-up rule discards it) |
-| No-counts flagged | lite and full: 1 (the shallow rep at 0:21, confirmed visually); heavy: 0 |
-| Body line | within ±2.5% on every rep (no bad examples in this clip) |
+| Reps counted | 25/25: lite and full models, at 30 and 15 fps, offline and in the browser |
+| Form faults | none on body line (−3.2% to +2.3%), knees (≥169°) or lockout. Rep 10 (0:21) is 0.05–0.15 shallower than calibration depending on the model, so it's flagged on some runs |
+| Headless Chromium | MediaPipe 1.0.1 runs. A fake camera at 26–30 fps (CPU delegate) counts 25/25 live; upload analysis takes 40 s |
 
 ## Architecture
 
 ```
- Camera ──┐                                                               ┌─► Voice
-          ├─► PoseEstimator ─► features ─► RepCounter ─► rules ─► Session ┼─► Live UI (count, timer, skeleton)
- Video ───┘   (MediaPipe)      (per frame)  (state machine)                └─► Summary ─► History (localStorage)
- file         `pose/`          └────────────── `core/` (pure TS, no DOM) ──┘
+ Camera ──┐                                                                ┌─► Voice
+          ├─► PoseEstimator ─► features ─► repCounter ─► judge ─► session ─┼─► Live UI (count, timer, skeleton)
+ Video ───┘   (MediaPipe,      (per frame)  (state machine)                 └─► Summary ─► History (localStorage)
+ file         one instance)    └──────────── src/core/ (pure TS, no DOM) ───┘
 ```
 
 | Unit | Purpose | Interface |
 |---|---|---|
-| `io/frameSource` | Camera stream, or video file sampled at a fixed 15 fps by seeking (deterministic) | yields `{image, tMs}` |
-| `pose/poseEstimator` | One reused MediaPipe instance (lite or full) | `detect(image, tMs) → Landmark[33] \| null` |
-| `core/features` | Landmarks → per-frame signals using the camera-side limbs | `features(lm, calib) → Features` |
-| `core/repCounter` | Hysteresis state machine | `step(features, tMs) → RepAttempt \| null` |
-| `core/calibration` | Setup hold + first 3 reps → thresholds | `calibrate(setup, reps) → Thresholds` |
-| `core/rules` | Judge one attempt | `judge(attempt, thresholds) → {valid, reasons[]}` |
-| `core/session` | Phases, timer, tally | reducer: `(state, event) → state` |
-| `io/voice`, `io/wakeLock` | speechSynthesis (unlocked on first tap), screen wake lock | `say(text)`, `keepAwake()` |
-| `store/history` | Persists sessions | `save(session)`, `list()` |
+| `io/videoFrames` | Camera frames via `requestVideoFrameCallback`, or a file sampled at 15 fps by seeking (deterministic) | `eachVideoFrame`, `seekFrames` |
+| `pose/poseEstimator` | One reused MediaPipe instance (lite or full) | `detect(source, tMs) → Pose \| null` |
+| `core/setup` | Steady top hold → calibration (side, up, height, elbow) | `setupSample`, `calibrateFromHold` |
+| `core/features` | Per-frame signals from the camera-side limbs | `computeFeatures(frame, calibration)` |
+| `core/repCounter` | Hysteresis state machine | `stepCounter(state, sample, lockoutElbowDeg)` |
+| `core/judge` | Rules and thresholds | `judge(attempt, thresholds) → Reason[]` |
+| `core/session` | Phases, timer, tally, events | `stepSession(state, frame) → {state, events}` |
+| `app/liveSession`, `app/uploadSession` | Wire frames → session → voice/view | `runLiveSession`, `analyzeVideo` |
+| `store/history` | Persists sessions | `saveSession`, `loadSessions` |
 
 ## Signals and rules
 
 Per frame, using the camera-side shoulder, elbow, wrist, hip, knee and ankle:
 
-- **height** = (shoulder − wrist) · up ÷ setup height. It is about 0.95 at a rep's top and about 0.45 at the bottom.
-- **hipOffset** = signed distance of the hip from the shoulder→ankle line, as a % of that line's length. Positive means the hip is above the line (butt high).
-- **kneeAngle** = the hip–knee–ankle angle.
-- **inPosition** = body within 40° of horizontal and joint visibility ≥ 0.5.
+- **height** = (shoulder − wrist) · up ÷ setup height. It is about 0.95 at a rep's top and 0.35–0.55 at the bottom.
+- **elbowDeg**, **kneeDeg**: joint angles.
+- **hipOffsetPct**: signed distance of the hip from the shoulder→ankle line, as a % of that line's length. Positive means the hip is above the line.
+- **inPosition**: body within 40° of level and joint visibility ≥ 0.5. **Plank** means in position with knees at 150° or more.
 
-Height is smoothed with a time-based EMA (τ = 50 ms) so results don't depend on fps.
+All four signals are smoothed with a time-based EMA (τ = 50 ms), so results don't depend on fps.
 
 ```
- TOP ──height drops 0.12──► DOWN ──rises 0.12 above min──► UP ──height ≥ lockout──► judge + speak ──► TOP
-                                                            └─ drops 0.12 before lockout ──► attempt with no_lockout ──► DOWN
+ TOP ──drops 0.12──► DOWN ──rises 0.12 above min──► UP ──height ≥ 0.85 and elbow ≥ lockout──► judge + speak ──► TOP
+                                                     └─ drops 0.12 before that ──► attempt with no_lockout ──► DOWN
 ```
 
 **Calibration**
 
-1. **Setup:** get into the top position. After 1 s steady, the voice says "Ready". This picks the camera-facing side (higher visibility), sets "up" as the mean wrist→shoulder direction, and records the setup height.
-2. **Auto-start, no countdown:** the set starts when the first rep is done. That rep is counted as "one", and the 60 s timer is backdated to when it began (its first descent), to match a real test's "go".
-3. **Reps 1–3:** the depth line is set to their median bottom + 0.08, the lockout line to their median top − 0.05, and the hip baseline to their median hip offset. The voice then says "Calibrated". Reps 1–3 count. They're judged on body line, knees and a lenient provisional lockout of 0.85, but not on depth. On the clip, the tops of reps sat 5–8% below the static setup hold.
-4. **Sanity check:** if the calibration bottom is above 0.60, show "calibration reps look shallow — redo".
+1. **Setup:** hold a plank with straight arms (elbow ≥ 150°) and legs for 1 s. The voice then says "Ready". This picks the camera-facing side, sets "up" as the mean wrist→shoulder direction, records the setup height, and sets the lockout angle to the mean elbow angle − 12°.
+2. **Auto-start, no countdown:** the set starts when the first rep is done. That rep counts as "one", and the 60 s timer is backdated to when it began.
+3. **Reps 1–3:** the depth line is set to their median bottom + 0.12, and the hip baseline to their median hip offset. The voice says "3. Calibrated". Reps 1–3 count and are judged on every rule except depth.
+4. **Sanity check:** if the calibration bottom is above 0.60, the voice says "Calibration too shallow. Restart and go lower".
 
-Starting thresholds (all constants in one file; tuned in M5): prominence 0.12, depth +0.08, lockout −0.05, hip ±5%, knee 150°, tilt 40°, visibility 0.5.
+All constants live in `src/core/rules.config.ts` and are tuned in M5.
 
 ## Session flow and UI
 
 ```
- Home ─tap Start─► Framing check ─► Hold top: "Ready" ─► Rep 1 done: "one", timer runs ─► Summary ─► History
-       (unlocks voice)  (body in frame)                       (60 s or untimed)            (auto-saved)
+ Home ─tap Start─► Live: "Get into position" ─► plank 1 s: "Ready" ─► rep 1 done: "1", timer runs ─► Summary ─► History
+       (unlocks voice)                                                  (60 s, or untimed)            (auto-saved)
 ```
 
-- **Live:** big count, timer, last verdict, and a skeleton overlay. The voice speaks the count number, or "No count, <reason>". It announces 30 s, 10 s and "Time".
-- **Summary:** valid / no-count totals and reps per minute. Each rep is a chip; tapping a no-count shows its bottom frame (kept in memory only) and the reason.
+- **Live:** big count, timer, status, last verdict, and a skeleton overlay. The voice speaks the count, or "No count, <reason>". Events from the same frame are joined ("3. Calibrated"). It announces 30 s, 10 s and "Time".
+- **Summary:** valid / no-count totals by reason. Each rep is a chip; tapping a no-count shows its lowest frame (kept in memory only) and the reason.
 - **History:** a list of sessions plus a valid-reps trend.
-- **Untimed mode** ends with a Stop tap, or after 5 s out of position.
-- **Upload:** pick a video file; it runs through the same pipeline with voice off and produces the same summary.
+- **Untimed mode** ends with a Stop tap, or after 5 s without a plank (standing, kneeling or out of view).
+- **Upload:** pick a video; it runs through the same pipeline at 15 fps with voice off and analyses the first set.
+- **Debug** (`#/debug`): camera, skeleton, fps, model load time, model/delegate choice, and a voice test.
 
 **Data**
 
 ```ts
-type Reason = 'not_low_enough' | 'no_lockout' | 'butt_high' | 'hips_sagging' | 'knees_down';
-interface RepResult { index: number; startMs: number; endMs: number; valid: boolean; reasons: Reason[];
-  bottom: number; top: number; hipMax: number; hipMin: number; kneeMin: number }
-interface Thresholds { side: 'left' | 'right'; up: [number, number]; setupHeightPx: number;
-  depthLine: number; lockoutLine: number; hipBaseline: number }
-interface Session { id: string; startedAt: string; mode: 'ippt60' | 'untimed'; source: 'camera' | 'upload';
-  durationMs: number; model: 'lite' | 'full'; thresholds: Thresholds; reps: RepResult[] }
+type Reason = 'knees_down' | 'not_low_enough' | 'no_lockout' | 'butt_high' | 'hips_sagging';
+interface Calibration { side: 'left' | 'right'; up: Point; setupHeight: number; setupElbowDeg: number }
+interface Thresholds { lockoutElbowDeg: number; depthLine: number | null; hipBaselinePct: number }
+interface RepResult { index: number; startMs: number; endMs: number; bottom: number; hipMaxPct: number;
+  hipMinPct: number; kneeMinDeg: number; lockedOut: boolean; reasons: Reason[] }
+interface SavedSession { id: string; startedAt: string; mode: 'ippt60' | 'untimed'; source: 'camera' | 'upload';
+  model: 'lite' | 'full'; summary: Summary; thresholds: Thresholds | null; reps: RepResult[] }
 ```
 
 ## Edge cases
 
 | Case | Behaviour |
 |---|---|
-| Tracking lost for > 1 s | Pause detection and say "Can't see you" once |
+| Tracking lost for > 1 s | Say "Can't see you" once |
 | Resting at the top | Allowed; the timer keeps running |
-| Reps before "Ready" | Ignored; the set starts with the first rep after "Ready" |
+| Kneeling or getting up | Still fed to the counter, so a knee touch gets "No count, knees". A final knees-down no-count is dropped when the set ends, because it's you getting up |
+| Reps before "Ready" | Ignored |
 | Rep finishing after "Time" | Not counted (same as IPPT) |
-| Standing up at the end | Discard the last attempt if the user leaves position within 2 s |
-| fps < 12 over 3 s | Show a warning and suggest the lite model |
-| Speech falls behind | Cancel the queued line and speak the latest |
-| Tab hidden or WebGL lost | Stop and save the partial session; show retry |
-| Model fails to load | Error screen with retry; model files are self-hosted |
+| fps < 12 | Live screen shows a warning suggesting the lite model |
+| Speech falls behind | Cancel the current line and speak the latest |
+| Tab hidden | Stop and save the partial session |
+| Camera denied or model fails to load | Error message with retry; model files are self-hosted |
 
 ## Testing
 
-- **Unit (vitest):** geometry, features, calibration and rules; `repCounter` on synthetic height curves (clean reps, half rep, no lockout, jitter).
-- **Golden fixture:** landmarks extracted from `IMG_8568.MOV` (Python MediaPipe 0.10.21, the same model). Expect 25 reps, 0 hip faults, and exactly one `not_low_enough` at about 21 s. Expect the same result with the fixture cut to 15 fps, which proves results don't depend on fps. The video itself is never committed.
-- **E2E (Playwright):** upload the clip, converted to VP9 WebM because Playwright's Chromium lacks H.264/HEVC. The summary should show 25 reps.
-- **Labelled clip** (recorded by you, side-on): 3 good reps, then 2 each of half rep, butt high, hips sagging, no lockout, knees, and 2 more good reps. It becomes golden fixture #2 and is used to tune the thresholds.
+- **Unit (vitest):** every `core/` module. Session tests use a synthetic side-on pose builder to cover clean reps, half reps, butt high, sagging, knees, no lockout, the 60 s timer, lost tracking and auto-end.
+- **Golden fixtures:** landmarks from `IMG_8568.MOV` (Python MediaPipe 0.10.21, lite and full), run at 30 and 15 fps. Expect "Ready" at 8–10 s, 25 reps, no faults except possibly rep 10 `not_low_enough`, and the IPPT clock starting at 12–13.3 s. The video itself is never committed.
+- **E2E (Playwright, CPU delegate):**
+  - **Upload:** the clip as VP9 WebM, because Playwright's Chromium lacks H.264/HEVC. Expect 25 rep chips.
+  - **Live:** the clip as a fake MJPEG camera. Expect "Ready", "3. Calibrated", an auto-end, and 25 chips.
+  - **Debug:** expect fps above 10.
+- **Labelled clip** (recorded by you, side-on): 3 good reps, then 2 each of half rep, butt high, hips sagging, no lockout and knees, then 2 more good reps. It becomes golden fixture #2 and is used to tune the thresholds.
 - **On device:** fps ≥ 15, voice audible with the camera on, screen stays awake, full 60 s set.
 
-## Build order (one PR each)
+## Build order
 
 | # | Milestone | Exit criterion |
 |---|---|---|
-| M0 | Spike: camera + MediaPipe + skeleton + fps + model toggle + voice test, deployed to Pages | You report fps, load time and voice working on your iPhone (go/no-go) |
-| M1 | `core/` with TDD + golden fixture | 25/25 golden test passes |
-| M2 | Live session: setup, calibration, timer, voice, wake lock | Full set works on your phone |
+| M0 | Scaffold, pose + camera, debug screen, deployed to Pages | You report fps, load time and voice on your iPhone (go/no-go, pick the default model) |
+| M1 | `core/` with TDD + golden fixtures | All unit + golden tests pass |
+| M2 | Live session: controller, home + live screens | Live E2E passes; a full set works on your phone |
 | M3 | Summary + history | Sessions persist across reloads |
-| M4 | Upload mode + E2E | Playwright shows 25 |
+| M4 | Upload mode | Upload E2E shows 25 |
 | M5 | Tune on the labelled clip, README camera guide, final deploy | Labelled faults flagged correctly |
 
 ## Risks
 
 | Risk | Mitigation |
 |---|---|
-| iPhone fps unmeasured (no published data) | M0 first. Fallbacks: lite model, lower input resolution |
+| iPhone fps unmeasured (no published data) | M0 first. Fallbacks: lite model, lower camera resolution |
 | MediaPipe GPU delegate gives wrong results on iOS ([#6142](https://github.com/google-ai-edge/mediapipe/issues/6142), segmenter) | Visual check in M0; fall back to the CPU delegate |
 | Slow first model load on iOS ([#5171](https://github.com/google-ai-edge/mediapipe/issues/5171)) | Measure in M0; show progress; self-host the model |
-| Thresholds tuned on one clip | Labelled clip in M5 |
+| Lite-model depth noise (±0.05) flips borderline reps | Depth tolerance 0.12; tune on the labelled clip; choose the full model if the phone is fast enough |
 | Shallow calibration reps make the depth line lenient | Sanity check + "make your first 3 your best" prompt |
