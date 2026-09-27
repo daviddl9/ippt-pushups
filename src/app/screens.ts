@@ -12,7 +12,6 @@ import { routeHash, type Route } from './routes';
 import { photosFor } from './sessionPhotos';
 import { analyzeUpload } from './uploadFlow';
 
-const START_LINE = 'Get into position, side-on to the camera';
 const NO_CLEANUP = () => {};
 
 /** Renders the screen for a route into root; returns its cleanup. */
@@ -33,9 +32,9 @@ export function showScreen(route: Route, root: HTMLElement, deps: AppDeps): () =
   }
 }
 
-/** Must run inside a tap: the first spoken line unlocks speech on iOS. */
+/** Must run inside a tap, so the silent unlock lets iOS speak later lines. */
 function startSet(deps: AppDeps, mode: Mode): void {
-  deps.voice.say(START_LINE);
+  deps.voice.unlock();
   deps.navigate(routeHash({ name: 'live', mode }));
 }
 
