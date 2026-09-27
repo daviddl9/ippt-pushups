@@ -71,6 +71,13 @@ describe('session timing', () => {
     expect(warnings[0].tMs - ippt.state.startMs!).toBeGreaterThanOrEqual(30_000);
   });
 
+  it('ignores rocking on the knees after the set, while the IPPT clock runs out', () => {
+    const rocking = Array.from({ length: 20 }, (_, i) => hold(1000, { kneeDeg: 90, height: i % 2 ? 0.8 : 1 }));
+    const { state } = runSession(sequence(hold(1200), reps(20), ...rocking), 'ippt60');
+    expect(state.reps).toHaveLength(20);
+    expect(state.reps.every((r) => r.reasons.length === 0)).toBe(true);
+  });
+
   it('ends an untimed set after 5 s resting on the knees', () => {
     const { state } = runSession(sequence(hold(1200), reps(2), hold(6000, { kneeDeg: 90 })), 'untimed');
     expect(state.phase).toBe('done');

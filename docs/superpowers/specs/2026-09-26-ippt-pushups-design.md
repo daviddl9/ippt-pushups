@@ -115,7 +115,7 @@ interface SavedSession { id: string; startedAt: string; mode: 'ippt60' | 'untime
 |---|---|
 | Tracking lost for > 1 s | Say "Can't see you" once |
 | Resting at the top | Allowed; the timer keeps running |
-| Kneeling or getting up | Still fed to the counter, so a knee touch gets "No count, knees up". A final knees-down no-count is dropped when the set ends, because it's you getting up |
+| Kneeling or getting up | Reps only start from a plank, so resting on the knees (e.g. after the set while the IPPT clock runs out) never creates attempts. A knee touch during a rep that started from a plank still gets "No count, knees up". A final knees-down no-count is dropped when the set ends, because it's you getting up |
 | Reps before "Ready" | Ignored |
 | Rep finishing after "Time" | Not counted (same as IPPT) |
 | fps < 12 | Live screen shows a warning suggesting the lite model |
