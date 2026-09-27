@@ -71,13 +71,6 @@ export function stepSession(state: SessionState, frame: Frame): SessionStep {
   return { state, events: NO_EVENTS };
 }
 
-/** True when this frame is the lowest point so far of the rep in progress. */
-export function reachedNewBottom(previous: SessionState, next: SessionState): boolean {
-  const bottom = next.counter.open?.bottom;
-  const before = previous.counter.open?.bottom;
-  return bottom !== undefined && (before === undefined || bottom < before);
-}
-
 export function stopSession(state: SessionState, tMs: number): SessionStep {
   return state.phase === 'done' ? { state, events: NO_EVENTS } : finish(state, tMs, false);
 }

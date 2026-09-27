@@ -9,13 +9,13 @@ const CUES: Record<Reason, string> = {
   hips_sagging: 'straighten back',
 };
 
-/** What the voice says for an event, or null to stay quiet: good reps are silent. */
-export function speechFor(event: SessionEvent): string | null {
+/** What the voice says for an event: the count for a good rep, a correction cue for a no-count. */
+export function speechFor(event: SessionEvent): string {
   switch (event.type) {
     case 'ready':
       return 'Ready';
     case 'rep':
-      return isValid(event.rep) ? null : `No count, ${CUES[event.rep.reasons[0]]}`;
+      return isValid(event.rep) ? String(event.validCount) : `No count, ${CUES[event.rep.reasons[0]]}`;
     case 'calibrated':
       return event.shallow ? 'Calibration too shallow. Restart and go lower' : 'Calibrated';
     case 'lost':

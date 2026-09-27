@@ -17,5 +17,6 @@ export const RULES = {
   lostAfterMs: 1000,
   untimedEndAfterMs: 5000,
   ipptDurationMs: 60_000,
+  topPhotoWindowMs: 400,
   timeWarningsSecondsLeft: [30, 10],
 } as const;
