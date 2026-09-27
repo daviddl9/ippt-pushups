@@ -86,8 +86,8 @@ All constants live in `src/core/rules.config.ts` and are tuned in M5.
 ## Session flow and UI
 
 ```
- Home ─tap Start─► Live: "Get into position" ─► plank 1 s: "Ready" ─► rep 1 done: timer runs ─► Summary ─► History
-       (unlocks voice)                                                  (60 s, or untimed)            (auto-saved)
+ Home ─tap Start─► Live ─► plank 1 s: "Ready" ─► rep 1 done: timer runs ─► Summary ─► History
+       (silent voice unlock)                       (60 s, or untimed)            (auto-saved)
 ```
 
 - **Live:** big count, timer, status, last verdict, and a skeleton overlay. The voice counts good reps ("12") and calls no-counts with a correction cue ("No count, go lower"), plus "Ready", "Calibrated", 30 s, 10 s and the final tally. Lines from the same frame are joined. A **Flip camera** button switches between front and back cameras; the choice is remembered, and flipping restarts the screen in place (no page reload, so iOS speech stays unlocked).

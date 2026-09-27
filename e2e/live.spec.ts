@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { recordSpeech, spokenLines } from './speech';
+import { recordSpeech, silentUnlocks, spokenLines } from './speech';
 
 test('live free-training set is counted aloud and summarised', async ({ page }) => {
   await recordSpeech(page);
@@ -13,11 +13,14 @@ test('live free-training set is counted aloud and summarised', async ({ page }) 
   expect(spoken).toContain('3. Calibrated');
   expect(spoken.filter((line) => /^\d+$/.test(line)).length).toBeGreaterThanOrEqual(20);
   expect(spoken.at(-1)).toMatch(/^Done\. \d+, \d+ no counts?$/);
+  expect(spoken.some((line) => /get into position/i.test(line))).toBe(false);
+  expect(await silentUnlocks(page)).toBe(1);
   await page.getByTestId('rep-chip').nth(4).click();
   await expect(page.getByTestId('rep-detail').locator('img')).toHaveCount(2);
 
   await page.getByTestId('redo').click();
   await expect(page).toHaveURL(/#\/live\/untimed$/);
   await expect(page.getByTestId('count')).toHaveText('0');
-  expect((await spokenLines(page)).at(-1)).toBe('Get into position, side-on to the camera');
+  expect(await silentUnlocks(page)).toBe(2);
+  expect((await spokenLines(page)).at(-1)).toMatch(/^Done\./);
 });
