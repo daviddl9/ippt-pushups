@@ -1,16 +1,22 @@
 import { formatClock } from '../app/liveText';
 import { isValid, type Reason } from '../core/judge';
 import type { RepPhotos } from '../app/repSnapshots';
+import type { Mode } from '../core/mode';
 import type { RepResult } from '../core/session';
 import type { SavedSession } from '../store/history';
 import { el } from './dom';
 import { MODE_LABELS, REASON_LABELS } from './labels';
 
-export function renderSummary(root: HTMLElement, session: SavedSession | undefined, photos: ReadonlyMap<number, RepPhotos>): void {
-  root.append(session ? summaryScreen(session, photos) : missingScreen());
+export function renderSummary(
+  root: HTMLElement,
+  session: SavedSession | undefined,
+  photos: ReadonlyMap<number, RepPhotos>,
+  onRedo: (mode: Mode) => void,
+): void {
+  root.append(session ? summaryScreen(session, photos, onRedo) : missingScreen());
 }
 
-function summaryScreen(session: SavedSession, photos: ReadonlyMap<number, RepPhotos>): HTMLElement {
+function summaryScreen(session: SavedSession, photos: ReadonlyMap<number, RepPhotos>, onRedo: (mode: Mode) => void): HTMLElement {
   const detail = el('div', { className: 'rep-detail', testId: 'rep-detail', attrs: { hidden: '' } });
   const chips = session.reps.map((rep) => repChip(rep, () => showRep(detail, chips, rep, photos.get(rep.index))));
   const { summary } = session;
@@ -25,16 +31,25 @@ function summaryScreen(session: SavedSession, photos: ReadonlyMap<number, RepPho
       total('No-count', 'nocount-total', String(summary.noCount), 'invalid'),
       total('Time', 'duration', formatClock(summary.durationMs), ''),
     ),
+    ...redoButton(session, onRedo),
     reasonList(summary.byReason),
     el('div', { className: 'chips' }, ...chips),
     detail,
     el(
       'nav',
       { className: 'links' },
-      el('a', { className: 'button', text: 'Home', attrs: { href: '#/' } }),
+      el('a', { className: 'button secondary', text: 'Home', attrs: { href: '#/' } }),
       el('a', { className: 'button secondary', text: 'History', attrs: { href: '#/history' } }),
     ),
   );
+}
+
+/** Only camera sessions can be redone; an uploaded video has no set to repeat. */
+function redoButton(session: SavedSession, onRedo: (mode: Mode) => void): HTMLElement[] {
+  if (session.source !== 'camera') return [];
+  const button = el('button', { className: 'button redo', testId: 'redo', text: `↻ Redo · ${MODE_LABELS[session.mode]}`, attrs: { type: 'button' } });
+  button.onclick = () => onRedo(session.mode);
+  return [button];
 }
 
 function subtitle(session: SavedSession): string {

@@ -91,7 +91,7 @@ All constants live in `src/core/rules.config.ts` and are tuned in M5.
 ```
 
 - **Live:** big count, timer, status, last verdict, and a skeleton overlay. The voice counts good reps ("12") and calls no-counts with a correction cue ("No count, go lower"), plus "Ready", "Calibrated", 30 s, 10 s and the final tally. Lines from the same frame are joined. A **Flip camera** button switches between front and back cameras; the choice is remembered, and flipping restarts the screen in place (no page reload, so iOS speech stays unlocked).
-- **Summary:** valid / no-count totals by reason. Each rep is a chip; tapping one shows its **bottom and top photos** (kept in memory only) and the verdict. The top photo is the most extended frame, taken until the next rep starts, or at most 400 ms after the rep is judged while still in a plank, so resting or getting up never replaces it.
+- **Summary:** valid / no-count totals by reason. Each rep is a chip; tapping one shows its **bottom and top photos** (kept in memory only) and the verdict. The top photo is the most extended frame, taken until the next rep starts, or at most 400 ms after the rep is judged while still in a plank, so resting or getting up never replaces it. For camera sessions, a **Redo** button starts the next set in the same mode straight away.
 - **History:** a list of sessions plus a valid-reps trend.
 - **Untimed mode** ends with a Stop tap, or after 5 s without a plank (standing, kneeling or out of view).
 - **Upload:** pick a video; it runs through the same pipeline at 15 fps with voice off and analyses the first set.

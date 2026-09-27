@@ -15,4 +15,9 @@ test('live free-training set is counted aloud and summarised', async ({ page }) 
   expect(spoken.at(-1)).toMatch(/^Done\. \d+, \d+ no counts?$/);
   await page.getByTestId('rep-chip').nth(4).click();
   await expect(page.getByTestId('rep-detail').locator('img')).toHaveCount(2);
+
+  await page.getByTestId('redo').click();
+  await expect(page).toHaveURL(/#\/live\/untimed$/);
+  await expect(page.getByTestId('count')).toHaveText('0');
+  expect((await spokenLines(page)).at(-1)).toBe('Get into position, side-on to the camera');
 });
