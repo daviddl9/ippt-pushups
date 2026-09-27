@@ -39,6 +39,18 @@ describe('stepCounter', () => {
     expect(attempts[0].startMs).toBe(300);
   });
 
+  it('never starts an attempt while resting on the knees', () => {
+    const rocking = Array.from({ length: 12 }, (_, i) => ({ height: i % 2 ? 0.75 : 1, kneeDeg: 90 }));
+    expect(attemptsFrom([{ height: 1 }, ...rocking])).toHaveLength(0);
+  });
+
+  it('closes a failed rep that collapses onto the knees without opening a new one', () => {
+    const samples = [...heights(1, 0.7, 0.45, 0.7), { height: 0.9, elbowDeg: 140 }, { height: 0.6, kneeDeg: 90 }, { height: 0.95, kneeDeg: 90 }, { height: 0.6, kneeDeg: 90 }];
+    const attempts = attemptsFrom(samples);
+    expect(attempts).toHaveLength(1);
+    expect(attempts[0]).toMatchObject({ lockedOut: false, kneeMinDeg: 90 });
+  });
+
   it('tracks hip and knee extremes across the attempt', () => {
     const samples = [{ height: 1 }, { height: 0.7, hipOffsetPct: 3 }, { height: 0.45, hipOffsetPct: -4, kneeDeg: 120 }, { height: 0.95 }];
     expect(attemptsFrom(samples)[0]).toMatchObject({ hipMaxPct: 3, hipMinPct: -4, kneeMinDeg: 120 });

@@ -41,7 +41,11 @@ export function stepCounter(state: CounterState, sample: Sample, lockoutElbowDeg
   return stepUp(state, sample, lockoutElbowDeg);
 }
 
+/** Reps start from a plank: resting on the knees between reps (or after the set) is never an attempt. */
+const inPlank = (s: Sample): boolean => s.kneeDeg >= RULES.minKneeDeg;
+
 function stepTop(state: CounterState, s: Sample): CounterStep {
+  if (!inPlank(s)) return { state };
   if (s.height >= state.peak) return { state: { ...state, peak: s.height, peakMs: s.tMs } };
   if (s.height >= state.peak - RULES.atTopTolerance) return { state: { ...state, peakMs: s.tMs } };
   if (s.height > state.peak - RULES.prominence) return { state };
@@ -60,7 +64,9 @@ function stepUp(state: CounterState, s: Sample, lockoutElbowDeg: number): Counte
     return { state: { phase: 'top', peak: s.height, peakMs: s.tMs, open: null }, attempt: close(open, s.tMs, true) };
   }
   if (s.height < state.peak - RULES.prominence) {
-    return { state: { ...state, phase: 'down', open: openAttempt(state.peakMs, s) }, attempt: close(open, s.tMs, false) };
+    const attempt = close(open, s.tMs, false);
+    if (!inPlank(s)) return { state: { ...INITIAL_COUNTER, peakMs: s.tMs }, attempt };
+    return { state: { ...state, phase: 'down', open: openAttempt(state.peakMs, s) }, attempt };
   }
   const risen = s.height > state.peak;
   return { state: { ...state, open, peak: risen ? s.height : state.peak, peakMs: risen ? s.tMs : state.peakMs } };
