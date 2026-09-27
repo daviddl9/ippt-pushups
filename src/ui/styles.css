@@ -676,3 +676,8 @@ select {
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
+
+.button.redo {
+  min-height: 56px;
+  font-size: 1.15rem;
+}

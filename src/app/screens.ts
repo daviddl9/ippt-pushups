@@ -21,7 +21,7 @@ export function showScreen(route: Route, root: HTMLElement, deps: AppDeps): () =
     case 'live':
       return startLiveScreen(route.mode, renderLive(root, route.mode, deps.settings.camera), deps);
     case 'summary':
-      renderSummary(root, loadSessions(deps.storage).find((s) => s.id === route.id), photosFor(route.id));
+      renderSummary(root, loadSessions(deps.storage).find((s) => s.id === route.id), photosFor(route.id), (mode) => startSet(deps, mode));
       return NO_CLEANUP;
     case 'debug':
       return startDebugScreen(renderDebug(root), deps);
@@ -33,14 +33,16 @@ export function showScreen(route: Route, root: HTMLElement, deps: AppDeps): () =
   }
 }
 
+/** Must run inside a tap: the first spoken line unlocks speech on iOS. */
+function startSet(deps: AppDeps, mode: Mode): void {
+  deps.voice.say(START_LINE);
+  deps.navigate(routeHash({ name: 'live', mode }));
+}
+
 function showHome(root: HTMLElement, deps: AppDeps): () => void {
-  const start = (mode: Mode) => {
-    deps.voice.say(START_LINE);
-    deps.navigate(routeHash({ name: 'live', mode }));
-  };
   const view = renderHome(root, {
-    startIppt: () => start('ippt60'),
-    startUntimed: () => start('untimed'),
+    startIppt: () => startSet(deps, 'ippt60'),
+    startUntimed: () => startSet(deps, 'untimed'),
     upload: (file) =>
       void analyzeUpload(file, deps, view.showProgress).catch((error: unknown) =>
         view.showError(error instanceof Error ? error.message : String(error)),
