@@ -1,6 +1,6 @@
 # IPPT Push-up Coach
 
-Phone web app that counts push-ups and calls out no-counts (not low enough, arms not locked, butt high, hips sagging, knees) with a correction cue, like an IPPT tester. Good reps stay silent. Pose tracking runs on the phone with MediaPipe; video never leaves the device.
+Phone web app that counts push-ups and calls out no-counts (not low enough, arms not locked, butt high, hips sagging, knees) with a correction cue, like an IPPT tester. Every rep keeps a bottom and a top photo for reviewing form. Pose tracking runs on the phone with MediaPipe; video never leaves the device.
 
 Live: https://daviddl9.github.io/ippt-pushups/
 

@@ -5,7 +5,7 @@ import { speechFor } from '../core/speech';
 import { eachVideoFrame } from '../io/videoFrames';
 import type { Voice } from '../io/voice';
 import type { PoseEstimator } from '../pose/poseEstimator';
-import { createBottomSnapshots } from './bottomSnapshots';
+import { createRepSnapshots } from './repSnapshots';
 import type { FinishedSession } from './finishedSession';
 
 export interface SessionView {
@@ -22,17 +22,16 @@ export function runLiveSession(mode: Mode, video: HTMLVideoElement, estimator: P
   let state = newSession(mode);
   let finish: (session: FinishedSession) => void = () => {};
   const done = new Promise<FinishedSession>((resolve) => (finish = resolve));
-  const snapshots = createBottomSnapshots(video);
+  const snapshots = createRepSnapshots(video);
   const apply = (step: SessionStep, pose: Pose | null, tMs: number) => {
     snapshots.observe(state, step);
     state = step.state;
-    const lines = step.events.map(speechFor).filter((line): line is string => line !== null);
-    if (lines.length > 0) voice.say(lines.join('. '));
+    if (step.events.length > 0) voice.say(step.events.map(speechFor).join('. '));
     view.announce(step.events);
     view.render(state, pose, tMs);
     if (state.phase !== 'done') return;
     stopFrames();
-    finish({ state, frames: snapshots.frames });
+    finish({ state, photos: snapshots.photos });
   };
   const stopFrames = eachVideoFrame(video, (tMs) => {
     const pose = estimator.detect(video, tMs);

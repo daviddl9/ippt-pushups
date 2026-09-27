@@ -9,7 +9,7 @@ import { startDebugScreen } from './debugScreen';
 import type { AppDeps } from './deps';
 import { startLiveScreen } from './liveScreen';
 import { routeHash, type Route } from './routes';
-import { framesFor } from './sessionFrames';
+import { photosFor } from './sessionPhotos';
 import { analyzeUpload } from './uploadFlow';
 
 const START_LINE = 'Get into position, side-on to the camera';
@@ -21,7 +21,7 @@ export function showScreen(route: Route, root: HTMLElement, deps: AppDeps): () =
     case 'live':
       return startLiveScreen(route.mode, renderLive(root, route.mode, deps.settings.camera), deps);
     case 'summary':
-      renderSummary(root, loadSessions(deps.storage).find((s) => s.id === route.id), framesFor(route.id));
+      renderSummary(root, loadSessions(deps.storage).find((s) => s.id === route.id), photosFor(route.id));
       return NO_CLEANUP;
     case 'debug':
       return startDebugScreen(renderDebug(root), deps);

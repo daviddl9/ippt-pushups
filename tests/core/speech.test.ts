@@ -7,9 +7,9 @@ const rep = (reasons: RepResult['reasons']): RepResult => ({
 });
 
 describe('speechFor', () => {
-  it.each<[SessionEvent, string | null]>([
+  it.each<[SessionEvent, string]>([
     [{ type: 'ready' }, 'Ready'],
-    [{ type: 'rep', rep: rep([]), validCount: 12 }, null],
+    [{ type: 'rep', rep: rep([]), validCount: 12 }, '12'],
     [{ type: 'rep', rep: rep(['not_low_enough']), validCount: 12 }, 'No count, go lower'],
     [{ type: 'rep', rep: rep(['no_lockout']), validCount: 3 }, 'No count, straighten arms'],
     [{ type: 'rep', rep: rep(['butt_high']), validCount: 3 }, 'No count, straighten back'],

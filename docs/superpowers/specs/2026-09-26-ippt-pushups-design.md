@@ -4,7 +4,7 @@
 
 ## Goal
 
-A phone web app that watches a push-up set through the camera, counts valid reps on screen, and calls out no-counts with a correction cue, like an IPPT tester. It also analyses uploaded videos and keeps a history of sessions.
+A phone web app that watches a push-up set through the camera, counts valid reps out loud, and calls out no-counts with a correction cue, like an IPPT tester. It also analyses uploaded videos and keeps a history of sessions.
 
 **Done when:** on an iPhone 13 Pro (iOS 26 Safari) it runs at ≥15 fps, counts a full 60 s set correctly, and flags the deliberate faults in a labelled test clip.
 
@@ -90,8 +90,8 @@ All constants live in `src/core/rules.config.ts` and are tuned in M5.
        (unlocks voice)                                                  (60 s, or untimed)            (auto-saved)
 ```
 
-- **Live:** big count, timer, status, last verdict, and a skeleton overlay. Good reps are silent. The voice speaks only no-counts, each with a correction cue ("No count, go lower"), plus "Ready", "Calibrated", 30 s, 10 s and the final tally. Lines from the same frame are joined. A **Flip camera** button switches between front and back cameras; the choice is remembered, and flipping restarts the screen in place (no page reload, so iOS speech stays unlocked).
-- **Summary:** valid / no-count totals by reason. Each rep is a chip; tapping a no-count shows its lowest frame (kept in memory only) and the reason.
+- **Live:** big count, timer, status, last verdict, and a skeleton overlay. The voice counts good reps ("12") and calls no-counts with a correction cue ("No count, go lower"), plus "Ready", "Calibrated", 30 s, 10 s and the final tally. Lines from the same frame are joined. A **Flip camera** button switches between front and back cameras; the choice is remembered, and flipping restarts the screen in place (no page reload, so iOS speech stays unlocked).
+- **Summary:** valid / no-count totals by reason. Each rep is a chip; tapping one shows its **bottom and top photos** (kept in memory only) and the verdict. The top photo is the most extended frame, taken until the next rep starts, or at most 400 ms after the rep is judged while still in a plank, so resting or getting up never replaces it.
 - **History:** a list of sessions plus a valid-reps trend.
 - **Untimed mode** ends with a Stop tap, or after 5 s without a plank (standing, kneeling or out of view).
 - **Upload:** pick a video; it runs through the same pipeline at 15 fps with voice off and analyses the first set.
@@ -129,7 +129,7 @@ interface SavedSession { id: string; startedAt: string; mode: 'ippt60' | 'untime
 - **Golden fixtures:** landmarks from `IMG_8568.MOV` (Python MediaPipe 0.10.21, lite and full), run at 30 and 15 fps. Expect "Ready" at 8–10 s, 25 reps, no faults except possibly rep 10 `not_low_enough`, and the IPPT clock starting at 12–13.3 s. The video itself is never committed.
 - **E2E (Playwright, CPU delegate):**
   - **Upload:** the clip as VP9 WebM, because Playwright's Chromium lacks H.264/HEVC. Expect 25 rep chips.
-  - **Live:** the clip as a fake MJPEG camera. Expect "Ready", "Calibrated", no per-rep counts, an auto-end, and 25 chips.
+  - **Live:** the clip as a fake MJPEG camera. Expect "Ready", spoken counts including "3. Calibrated", an auto-end, 25 chips, and two photos per rep.
   - **Debug:** expect fps above 10.
 - **Labelled clip** (recorded by you, side-on): 3 good reps, then 2 each of half rep, butt high, hips sagging, no lockout and knees, then 2 more good reps. It becomes golden fixture #2 and is used to tune the thresholds.
 - **On device:** fps ≥ 15, voice audible with the camera on, screen stays awake, full 60 s set.

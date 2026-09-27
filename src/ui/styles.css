@@ -509,10 +509,29 @@ select {
   font-weight: 700;
 }
 
-.rep-detail img {
+.rep-photos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.rep-photos figure {
+  margin: 0;
+}
+
+.rep-photos img {
+  display: block;
   width: 100%;
-  max-width: 480px;
-  border-radius: 12px;
+  border-radius: 10px;
+}
+
+.rep-photos figcaption {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* History */

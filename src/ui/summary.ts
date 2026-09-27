@@ -1,17 +1,18 @@
 import { formatClock } from '../app/liveText';
 import { isValid, type Reason } from '../core/judge';
+import type { RepPhotos } from '../app/repSnapshots';
 import type { RepResult } from '../core/session';
 import type { SavedSession } from '../store/history';
 import { el } from './dom';
 import { MODE_LABELS, REASON_LABELS } from './labels';
 
-export function renderSummary(root: HTMLElement, session: SavedSession | undefined, frames: ReadonlyMap<number, string>): void {
-  root.append(session ? summaryScreen(session, frames) : missingScreen());
+export function renderSummary(root: HTMLElement, session: SavedSession | undefined, photos: ReadonlyMap<number, RepPhotos>): void {
+  root.append(session ? summaryScreen(session, photos) : missingScreen());
 }
 
-function summaryScreen(session: SavedSession, frames: ReadonlyMap<number, string>): HTMLElement {
+function summaryScreen(session: SavedSession, photos: ReadonlyMap<number, RepPhotos>): HTMLElement {
   const detail = el('div', { className: 'rep-detail', testId: 'rep-detail', attrs: { hidden: '' } });
-  const chips = session.reps.map((rep) => repChip(rep, () => showRep(detail, chips, rep, frames.get(rep.index))));
+  const chips = session.reps.map((rep) => repChip(rep, () => showRep(detail, chips, rep, photos.get(rep.index))));
   const { summary } = session;
   return el(
     'section',
@@ -62,16 +63,20 @@ function repChip(rep: RepResult, onSelect: () => void): HTMLButtonElement {
   return chip;
 }
 
-function showRep(detail: HTMLElement, chips: readonly HTMLButtonElement[], rep: RepResult, frame: string | undefined): void {
+function showRep(detail: HTMLElement, chips: readonly HTMLButtonElement[], rep: RepResult, photos: RepPhotos | undefined): void {
   chips.forEach((chip, i) => chip.setAttribute('aria-pressed', String(i === rep.index - 1)));
   const verdict = isValid(rep) ? 'Good rep' : rep.reasons.map((reason) => REASON_LABELS[reason]).join(', ');
-  const picture = frame ? el('img', { attrs: { src: frame, alt: `Lowest point of rep ${rep.index}` } }) : noFrameNote(rep);
-  detail.replaceChildren(el('p', { className: 'rep-verdict', text: `Rep ${rep.index} · ${verdict}` }), picture);
+  const pictures = photos ? photoPair(rep.index, photos) : el('p', { className: 'hint', text: 'Photos are not kept after a reload.' });
+  detail.replaceChildren(el('p', { className: 'rep-verdict', text: `Rep ${rep.index} · ${verdict}` }), pictures);
   detail.hidden = false;
 }
 
-function noFrameNote(rep: RepResult): HTMLElement {
-  return el('p', { className: 'hint', text: isValid(rep) ? 'Frames are kept for no-counts only.' : 'Frame not kept after reload.' });
+function photoPair(index: number, photos: RepPhotos): HTMLElement {
+  return el('div', { className: 'rep-photos' }, photo(photos.bottom, 'Bottom', index), photo(photos.top, 'Top', index));
+}
+
+function photo(src: string, label: string, index: number): HTMLElement {
+  return el('figure', {}, el('img', { attrs: { src, alt: `${label} of rep ${index}` } }), el('figcaption', { text: label }));
 }
 
 function missingScreen(): HTMLElement {

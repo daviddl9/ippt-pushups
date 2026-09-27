@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newSession, reachedNewBottom, stepSession, stopSession, type SessionEvent } from '../../src/core/session';
+import { stopSession, type SessionEvent } from '../../src/core/session';
 import { runSession, type TimedEvent } from '../helpers';
 import { hidden, hold, rep, reps, sequence } from '../synthetic';
 
@@ -93,20 +93,5 @@ describe('session tracking', () => {
     const { state } = runSession(sequence(hold(1200), reps(3), rep({ kneeDeg: 100 })), 'untimed');
     expect(state.reps).toHaveLength(4);
     expect(stopSession(state, 99_999).state.reps).toHaveLength(3);
-  });
-});
-
-describe('reachedNewBottom', () => {
-  it('fires only while the rep in progress is going lower', () => {
-    let state = newSession('untimed');
-    const flags = sequence(hold(1200), rep()).map((frame) => {
-      const next = stepSession(state, frame).state;
-      const flag = reachedNewBottom(state, next);
-      state = next;
-      return flag;
-    });
-    const holdFrames = 36;
-    expect(flags.slice(0, holdFrames).some(Boolean)).toBe(false);
-    expect(flags.slice(holdFrames).filter(Boolean).length).toBeGreaterThan(3);
   });
 });
